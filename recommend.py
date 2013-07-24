@@ -4,10 +4,12 @@ import matplotlib.pyplot as pyplot
 def cofiCostFunc(params, Y, R, num_users, num_movies, num_features, lambd):
 	"""
 	Collaborative filtering cost function
+	params (for the sake of scipy optimize) are a one dimensional array (Row major)
 	"""
 	#unfold X and theta from params
-	X = np.reshape(params[:num_movies, :], (num_movies, num_features))
-	Theta = np.reshape(params[num_movies:, :], (num_users, num_features))
+
+	X = np.reshape(params[:num_movies*num_features], (num_movies, num_features))
+	Theta = np.reshape(params[num_movies*num_features:], (num_users, num_features))
 	#compute the estimated rating for each user and each movie
 	Y_est = np.dot(X, np.transpose(Theta))
 	#compute the difference in rating and prediction for movies that were rated
@@ -20,7 +22,7 @@ def cofiCostFunc(params, Y, R, num_users, num_movies, num_features, lambd):
 	x_grad = np.dot(Y_err, Theta) + (lambd * X) 
 	Theta_grad = np.dot(np.transpose(Y_err), X)\
 	 + (lambd * Theta)
-	grad = np.vstack((x_grad, Theta_grad))
+	grad = np.vstack((x_grad, Theta_grad)).flatten()
 	return (J, grad)
 
 def computeNumericalGradient(J, theta):
@@ -33,12 +35,11 @@ def computeNumericalGradient(J, theta):
 	perturb = np.zeros(theta.shape)
 	e = 1e-4
 	for i in xrange(theta.shape[0]):
-		for j in xrange(theta.shape[1]):
-			perturb[i, j] = e
-			loss1 = J(theta - perturb)[0]
-			loss2 = J(theta + perturb)[0]
-			numgrad[i, j] = (loss2 - loss1) / (2 * e)
-			perturb[i, j] = 0
+			perturb[i] = e
+			loss1 = J((theta - perturb).flatten())[0]
+			loss2 = J((theta + perturb).flatten())[0]
+			numgrad[i] = (loss2 - loss1) / (2 * e)
+			perturb[i] = 0
 	return numgrad
 
 def checkCostFunction(lambd = 0):
@@ -63,11 +64,11 @@ def checkCostFunction(lambd = 0):
 	num_features = Theta_t.shape[1]
 
 	#calculate numeric gradient and cofiCost gradient, for comparison
-	params = np.vstack((X, Theta))
+	params = np.vstack((X, Theta)).flatten()
 	numgrad = computeNumericalGradient(lambda t: cofiCostFunc(t, Y, R, num_users, num_movies, num_features, lambd), params)
 	(cost, grad) = cofiCostFunc(params, Y, R, num_users, num_movies, num_features, lambd)
 
-	print np.vstack((numgrad.flatten(), grad.flatten()))
+	print np.vstack((numgrad, grad))
 	print "The difference is ", np.linalg.norm(numgrad - grad)/np.linalg.norm(numgrad + grad)			
 
 def loadMovieList(filename):
